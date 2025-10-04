@@ -13,13 +13,25 @@
         }
         .code { 
             background: #f4f4f4; 
-            padding: 10px; 
-            border-radius: 5px;
+            padding: 15px; 
+            border-radius: 8px;
             word-break: break-all;
             margin: 20px 0;
+            font-family: monospace;
+            font-size: 14px;
         }
         .success { color: #28a745; }
         .error { color: #dc3545; }
+        .info { color: #007bff; }
+        .debug {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 12px;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
@@ -29,37 +41,57 @@
     <div id="instructions" style="display:none;">
         <p>Copy the authorization code above and paste it into your Ravelr app.</p>
     </div>
+    <div id="debug-info" class="debug"></div>
 
     <script>
-        // Extract authorization code from URL
+        // Extract all URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
+        const allParams = {};
+        for (const [key, value] of urlParams) {
+            allParams[key] = value;
+        }
+
+        // OAuth 1.0a parameters to check for
+        const oauthVerifier = urlParams.get('oauth_verifier');
+        const oauthToken = urlParams.get('oauth_token');
         const error = urlParams.get('error');
-        const state = urlParams.get('state');
+        const denied = urlParams.get('denied');
 
         const statusDiv = document.getElementById('status');
         const codeDiv = document.getElementById('code-display');
         const instructionsDiv = document.getElementById('instructions');
+        const debugDiv = document.getElementById('debug-info');
 
-        if (error) {
-            statusDiv.innerHTML = '<span class="error">❌ OAuth Error: ' + error + '</span>';
-            if (urlParams.get('error_description')) {
-                statusDiv.innerHTML += '<br><small>' + urlParams.get('error_description') + '</small>';
+        // Show debug information
+        debugDiv.innerHTML = '<strong>Debug Info:</strong><br>' +
+            'Full URL: ' + window.location.href + '<br>' +
+            'All Parameters: ' + JSON.stringify(allParams, null, 2);
+
+        if (error || denied) {
+            statusDiv.innerHTML = '<span class="error">❌ OAuth Error</span>';
+            if (error) {
+                codeDiv.innerHTML = '<div class="code"><strong>Error:</strong><br>' + error + '</div>';
             }
-        } else if (code) {
-            statusDiv.innerHTML = '<span class="success">✅ OAuth Success!</span>';
-            codeDiv.innerHTML = '<div class="code"><strong>Authorization Code:</strong><br>' + code + '</div>';
+            if (denied) {
+                codeDiv.innerHTML = '<div class="code"><strong>Access Denied:</strong><br>User denied authorization</div>';
+            }
+        } else if (oauthVerifier) {
+            statusDiv.innerHTML = '<span class="success">✅ OAuth 1.0a Success!</span>';
+            codeDiv.innerHTML = '<div class="code"><strong>OAuth Verifier:</strong><br>' + oauthVerifier + '</div>';
+            if (oauthToken) {
+                codeDiv.innerHTML += '<div class="code"><strong>OAuth Token:</strong><br>' + oauthToken + '</div>';
+            }
             instructionsDiv.style.display = 'block';
-            
-            // Log for debugging
-            console.log('OAuth Success:', {
-                code: code,
-                state: state,
-                fullUrl: window.location.href
-            });
+            instructionsDiv.innerHTML = '<p class="info">📋 Copy the <strong>OAuth Verifier</strong> above and paste it into your Ravelr app to complete login.</p>';
+        } else if (Object.keys(allParams).length > 0) {
+            statusDiv.innerHTML = '<span class="info">📋 Parameters Found</span>';
+            codeDiv.innerHTML = '<div class="code"><strong>Available Parameters:</strong><br>' + 
+                Object.entries(allParams).map(([k, v]) => `${k}: ${v}`).join('<br>') + '</div>';
+            instructionsDiv.style.display = 'block';
+            instructionsDiv.innerHTML = '<p class="info">If any of these looks like an authorization code, copy it to your app.</p>';
         } else {
-            statusDiv.innerHTML = '<span class="error">❌ No authorization code received</span>';
-            codeDiv.innerHTML = '<div class="code">Full URL: ' + window.location.href + '</div>';
+            statusDiv.innerHTML = '<span class="success">🧶 Ravelr OAuth Callback Page Ready!</span>';
+            codeDiv.innerHTML = '<p>This page will display your OAuth authorization parameters when redirected from Ravelry.</p>';
         }
     </script>
 </body>
