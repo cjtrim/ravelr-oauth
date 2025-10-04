@@ -1,97 +1,49 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Ravelr OAuth Callback</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧶 Ravelr OAuth 2.0 Callback</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            max-width: 600px; 
-            margin: 50px auto; 
-            padding: 20px;
-            text-align: center;
-        }
-        .code { 
-            background: #f4f4f4; 
-            padding: 15px; 
-            border-radius: 8px;
-            word-break: break-all;
-            margin: 20px 0;
-            font-family: monospace;
-            font-size: 14px;
-        }
-        .success { color: #28a745; }
-        .error { color: #dc3545; }
-        .info { color: #007bff; }
-        .debug {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 12px;
-            text-align: left;
-        }
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .code-box { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; word-break: break-all; }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h1>🧶 Ravelr OAuth Callback</h1>
-    <div id="status">Processing OAuth callback...</div>
-    <div id="code-display"></div>
-    <div id="instructions" style="display:none;">
-        <p>Copy the authorization code above and paste it into your Ravelr app.</p>
+    <div class="container">
+        <h1>🧶 Ravelr OAuth Callback</h1>
+        <div id="result"></div>
+        <div id="debug"></div>
     </div>
-    <div id="debug-info" class="debug"></div>
 
     <script>
-        // Extract all URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const allParams = {};
-        for (const [key, value] of urlParams) {
-            allParams[key] = value;
-        }
-
-        // OAuth 1.0a parameters to check for
-        const oauthVerifier = urlParams.get('oauth_verifier');
-        const oauthToken = urlParams.get('oauth_token');
-        const error = urlParams.get('error');
-        const denied = urlParams.get('denied');
-
-        const statusDiv = document.getElementById('status');
-        const codeDiv = document.getElementById('code-display');
-        const instructionsDiv = document.getElementById('instructions');
-        const debugDiv = document.getElementById('debug-info');
-
-        // Show debug information
-        debugDiv.innerHTML = '<strong>Debug Info:</strong><br>' +
-            'Full URL: ' + window.location.href + '<br>' +
-            'All Parameters: ' + JSON.stringify(allParams, null, 2);
-
-        if (error || denied) {
-            statusDiv.innerHTML = '<span class="error">❌ OAuth Error</span>';
-            if (error) {
-                codeDiv.innerHTML = '<div class="code"><strong>Error:</strong><br>' + error + '</div>';
+        const params = new URLSearchParams(window.location.search);
+        const result = document.getElementById('result');
+        const debug = document.getElementById('debug');
+        
+        // Show all parameters for debugging
+        debug.innerHTML = '<h3>Debug Info:</h3>' +
+            '<div class="code-box">Full URL: ' + window.location.href + '</div>' +
+            '<div class="code-box">All params: ' + JSON.stringify(Object.fromEntries(params), null, 2) + '</div>';
+        
+        if (params.get('error')) {
+            result.innerHTML = '<div class="error">❌ Error: ' + params.get('error') + '</div>';
+            if (params.get('error_description')) {
+                result.innerHTML += '<div>Description: ' + params.get('error_description') + '</div>';
             }
-            if (denied) {
-                codeDiv.innerHTML = '<div class="code"><strong>Access Denied:</strong><br>User denied authorization</div>';
+        } else if (params.get('code')) {
+            result.innerHTML = '<div class="success">✅ Success!</div>' +
+                '<div>Authorization Code:</div>' +
+                '<div class="code-box">' + params.get('code') + '</div>';
+            if (params.get('state')) {
+                result.innerHTML += '<div>State:</div>' +
+                    '<div class="code-box">' + params.get('state') + '</div>';
             }
-        } else if (oauthVerifier) {
-            statusDiv.innerHTML = '<span class="success">✅ OAuth 1.0a Success!</span>';
-            codeDiv.innerHTML = '<div class="code"><strong>OAuth Verifier:</strong><br>' + oauthVerifier + '</div>';
-            if (oauthToken) {
-                codeDiv.innerHTML += '<div class="code"><strong>OAuth Token:</strong><br>' + oauthToken + '</div>';
-            }
-            instructionsDiv.style.display = 'block';
-            instructionsDiv.innerHTML = '<p class="info">📋 Copy the <strong>OAuth Verifier</strong> above and paste it into your Ravelr app to complete login.</p>';
-        } else if (Object.keys(allParams).length > 0) {
-            statusDiv.innerHTML = '<span class="info">📋 Parameters Found</span>';
-            codeDiv.innerHTML = '<div class="code"><strong>Available Parameters:</strong><br>' + 
-                Object.entries(allParams).map(([k, v]) => `${k}: ${v}`).join('<br>') + '</div>';
-            instructionsDiv.style.display = 'block';
-            instructionsDiv.innerHTML = '<p class="info">If any of these looks like an authorization code, copy it to your app.</p>';
         } else {
-            statusDiv.innerHTML = '<span class="success">🧶 Ravelr OAuth Callback Page Ready!</span>';
-            codeDiv.innerHTML = '<p>This page will display your OAuth authorization parameters when redirected from Ravelry.</p>';
+            result.innerHTML = '<div class="error">❌ No code or error found</div>';
         }
     </script>
 </body>
